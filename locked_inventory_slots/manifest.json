@@ -1,11 +1,13 @@
 {
   "name": "Locked Inventory Slots",
   "author": "Chikedor",
-  "version": "0.0.1",
-  "description": "Research build: keeps selected player inventory slots outside vanilla Sort.",
+  "version": "0.1.0",
+  "description": "Locks individual player inventory slots so vanilla Sort leaves them untouched.",
   "minInstallerVersion": "0.15.5",
   "manifestVersion": 1,
   "requires_hooks": [
-    "ui.menu_opened"
+    "ui.menu_opened",
+    "ui.menu_closed",
+    "ui.menu_refreshed"
   ]
 }

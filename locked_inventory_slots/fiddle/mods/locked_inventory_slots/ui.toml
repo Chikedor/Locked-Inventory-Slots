@@ -1,0 +1,4 @@
+lock_slot = "Lock inventory space"
+unlock_slot = "Unlock inventory space"
+slot_locked = "Inventory space locked"
+slot_unlocked = "Inventory space unlocked"

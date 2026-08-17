@@ -1,0 +1,3 @@
+[asset_properties]
+	[asset_properties.fiddle_renames]
+		"mods/locked_inventory_slots/ui" = ["*"]

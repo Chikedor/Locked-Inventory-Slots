@@ -1,0 +1,5 @@
+[asset_properties]
+"mods/locked_inventory_slots/ui/lock_slot" = "Bloquear espacio de inventario"
+"mods/locked_inventory_slots/ui/unlock_slot" = "Desbloquear espacio de inventario"
+"mods/locked_inventory_slots/ui/slot_locked" = "Espacio de inventario bloqueado"
+"mods/locked_inventory_slots/ui/slot_unlocked" = "Espacio de inventario desbloqueado"
