@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-- Fields of Mistria: 1.0.3, Steam build 24742087
-- MOMI/MMAPI: 0.15.5, tag `v0.15.5`, commit `9b90ee213309e7aaca5870ac43272682b6f595ad`
+- Fields of Mistria: 1.0.4, Steam build 24820767
+- MOMI/MMAPI: 0.15.6, tag `v0.15.6`, commit `288d843a57df4ee7c7bab224925fde1ce54d1bf4`
 
 ## Player-visible objective
 
@@ -79,3 +79,29 @@ On 2026-08-17, the 0.0.1 diagnostic build ran against Fields of Mistria 1.0.3 wi
 The check covered the full serialized item/count multiset and exact identity/content for all three locked positions. The transaction was repeated and passed again.
 
 The v0.1.0 player-facing build was then tested in game. The user confirmed lock/unlock, protected vanilla Sort, manual item interaction, per-save persistence, locked empty positions, Spanish UI, and the final exact-size yellow indicators in both the Inventory page and toolbar. The toolbar trace proved that its persistent nodes can exist with `square_size=0x0` during save application; supplying the verified 20x20 vanilla size fixed the invisible indicator without a per-frame scan. Final screenshots are retained under `docs/images/`.
+
+## Fields of Mistria 1.0.4 compatibility investigation
+
+Investigated on 2026-08-19 against Fields of Mistria 1.0.4, Steam build 24820767. Steam installed a fresh vanilla `assets.zip` with SHA-256 `e55ef6bcaa7430008a6fcae7980ef06ca6912bb10431c177807b366a0fc5a450`; the existing `assets.bak.zip` was still the 1.0.3 archive and was deliberately left untouched.
+
+The mod's direct vanilla dependencies remain compatible at source level. `Inventory.gml`, `PlayerMenu.gml`, `InventoryMenu.gml`, `ToolbarMenu.gml`, and `Node.gml` are byte-identical between the pristine 1.0.3 and 1.0.4 archives. `AriFsm.gml` changed only to remove three unrelated mines-run statistics blocks; its player-inventory resize behavior is unchanged. The relevant inventory-outline and toolbar UI assets are also byte-identical.
+
+Publication is blocked by the installer framework rather than this mod. Official MOMI/MMAPI 0.15.5 (`v0.15.5`, commit `9b90ee213309e7aaca5870ac43272682b6f595ad`, Windows x64 CLI SHA-256 `49a14873fe0262db617f80212f2f06bd22833a22f446b573cad4ca876e7c7e57`) fails strict seam staging against 1.0.4 before mod compilation:
+
+```text
+seam 'dungeon_floor_bracket': anchor matched 0x in assets/gml/scripts/GameplaySystems/Dungeon/enter_dungeon.gml (expected 1)
+```
+
+At the time of that first investigation, no newer official release or prerelease existed. Official `main` commit `01e83d892e93c74dbd39602ce98c6c1ccb9e19b5` still contained the incompatible anchor, so version 0.1.0 was kept as the last known-good 1.0.3 release.
+
+### Resolution with MOMI/MMAPI 0.15.6
+
+Official MOMI/MMAPI 0.15.6 was published with a 1.0.4 re-anchor for `dungeon_floor_bracket` and no hook changes. On 2026-08-20, the official Windows x64 CLI (SHA-256 `2d97a7754dc14bad3e7220a85d20e5684aac083c88dacf93f8b393d1f89ce3ac`) passed strict lint and required compilation for Locked Inventory Slots 0.1.1 against the pristine 1.0.4 backup:
+
+```text
+lint chikedor.locked_inventory_slots v0.1.1
+  gml: 1 file(s) installing under scripts/chikedor_locked_inventory_slots/
+  RESULT: OK - the apply would install this mod
+```
+
+Because every directly relied-on game and UI contract was unchanged, version 0.1.1 is a compatibility-only release. Its minimum installer version is 0.15.6; no behavioral code rewrite was required.

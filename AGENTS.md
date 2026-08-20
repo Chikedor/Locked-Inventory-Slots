@@ -4,8 +4,8 @@
 
 - Mod: `Locked Inventory Slots`
 - Installable directory: `locked_inventory_slots`
-- Supported game version: `Fields of Mistria 1.0.3 (Steam build 24742087)`
-- Supported MOMI/MMAPI version: `0.15.5`
+- Supported game version: `Fields of Mistria 1.0.4 (Steam build 24820767)`
+- Supported MOMI/MMAPI version: `0.15.6`
 
 Before changing code, read this file, `README.md`, `RESEARCH.md`, and the shared Fields of Mistria Modding Knowledge project. Do not rely on conclusions that only exist in another conversation.
 
