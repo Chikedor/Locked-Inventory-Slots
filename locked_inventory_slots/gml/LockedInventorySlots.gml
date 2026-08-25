@@ -1,7 +1,8 @@
 #macro LOCKED_INVENTORY_SLOTS_MOD "locked_inventory_slots"
-#macro LOCKED_INVENTORY_SLOTS_VERSION "0.1.1"
-#macro LOCKED_INVENTORY_SLOTS_CONFIG_VERSION 1
+#macro LOCKED_INVENTORY_SLOTS_VERSION "0.1.2"
+#macro LOCKED_INVENTORY_SLOTS_CONFIG_VERSION 2
 #macro LOCKED_INVENTORY_SLOTS_SAVE_VERSION 1
+#macro LOCKED_INVENTORY_SLOTS_CONTROLLER_BINDING "GAMEPAD_LEFT_STICK"
 
 function locked_inventory_slots_runtime() {
     if (global[$ "__locked_inventory_slots"] == undefined) {
@@ -29,10 +30,23 @@ function locked_inventory_slots_config() {
     if (_rt.config != undefined) {
         return _rt.config;
     }
-    var _source = mmapi_config_read_valid(LOCKED_INVENTORY_SLOTS_MOD, LOCKED_INVENTORY_SLOTS_CONFIG_VERSION);
-    var _controller_binding = mmapi_config_get(_source, "controller_toggle_binding", "GAMEPAD_LEFT_SHOULDER+GAMEPAD_X");
+    var _source = mmapi_config_load(LOCKED_INVENTORY_SLOTS_MOD);
+    if (!is_struct(_source)) {
+        _source = {};
+    }
+    var _source_version = _source[$ "__config_version"];
+    if (_source_version != 1 && _source_version != LOCKED_INVENTORY_SLOTS_CONFIG_VERSION) {
+        _source = {};
+    }
+    var _controller_binding = _source_version == 1
+        ? LOCKED_INVENTORY_SLOTS_CONTROLLER_BINDING
+        : mmapi_config_get(
+            _source,
+            "controller_toggle_binding",
+            LOCKED_INVENTORY_SLOTS_CONTROLLER_BINDING
+        );
     if (!is_string(_controller_binding) || mmapi_hotkey_binding_from_name(_controller_binding) == undefined) {
-        _controller_binding = "GAMEPAD_LEFT_SHOULDER+GAMEPAD_X";
+        _controller_binding = LOCKED_INVENTORY_SLOTS_CONTROLLER_BINDING;
     }
     _rt.config = {
         enabled: mmapi_config_bool(_source, "enabled", true),

@@ -105,3 +105,13 @@ lint chikedor.locked_inventory_slots v0.1.1
 ```
 
 Because every directly relied-on game and UI contract was unchanged, version 0.1.1 is a compatibility-only release. Its minimum installer version is 0.15.6; no behavioral code rewrite was required.
+
+## Controller binding conflict and version 0.1.2
+
+Player feedback on 2026-08-25 exposed a conflict in the original `GAMEPAD_LEFT_SHOULDER+GAMEPAD_X` default. Pristine Fields of Mistria 1.0.4 maps the left bumper to both `InputId.MenuTabLeft` and `InputId.ToolbarIncUp`; `JournalMenu` reacts to `MenuTabLeft` while the Inventory page is open. The west face button maps to `InputId.PickUpOne`, which `InventoryMenu.input_check` also reads directly. MMAPI 0.15.6 consumes a compound binding's trigger only inside its own hotkey registry, not from the game's separate `INPUT` bindings, so the chord cannot suppress either vanilla action.
+
+Version 0.1.2 changes the default to `GAMEPAD_LEFT_STICK` (L3). The pristine Inventory, Player, Journal, and Toolbar menu sources do not handle `InputId.Ride`, whose default controller binding is the left-stick click; the mod callback remains gated to the active Player Inventory pilot. An initial same-schema comparison against the exact legacy text did not migrate the live config and was discarded. The verified design increments the config schema to 2: schema-1 files retain all Boolean options but reset the controller binding once to L3, while schema-2 custom bindings are preserved normally.
+
+MOMI 0.15.6 strict lint and required compilation passed version 0.1.2 against the pristine Fields of Mistria 1.0.4 build-24820767 backup. A real apply compiled 103 framework/seamed files and one GML file for each of the three locally enabled mods, then installed Locked Inventory Slots 0.1.2 successfully. The repository source, installed mod copy, and final archive entry shared SHA-256 `4226d1399d12cbe557daac5d9a675514f3736fd74b8b51e40749322fa17feb5a`; the final `assets.zip` SHA-256 was `a451044a2931c3eb9a546e0db4b6d8c9b8d4610b160bdfaa2d110b6d96b5a962`.
+
+The live schema-1 config containing the shipped `GAMEPAD_LEFT_SHOULDER+GAMEPAD_X` value migrated to schema 2 with `GAMEPAD_LEFT_STICK`, while `enabled`, `show_lock_border`, `protect_from_sort`, and `debug_logging` retained their prior values. The user then confirmed in game that pressing L3 on a focused Inventory position toggles its lock border without changing the Journal/toolbar page or moving the item.

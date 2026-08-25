@@ -9,7 +9,7 @@ The mod does not replace the inventory or implement a custom category/order algo
 - Fields of Mistria 1.0.4, Steam build 24820767
 - MOMI/MMAPI 0.15.6 or newer
 
-Version 0.1.1 was built and compile-validated with the versions above. It is a compatibility-only update; the inventory and UI contracts used by version 0.1.0 are unchanged in game 1.0.4.
+Version 0.1.2 was built, compile-validated, and tested in game with the versions above. Version 0.1.1 was a compatibility-only update; the inventory and UI contracts used by version 0.1.0 are unchanged in game 1.0.4.
 
 ## Installation
 
@@ -41,13 +41,13 @@ Open the vanilla Inventory page, then hold **Shift** and **right-click** an inve
 
 ### Controller
 
-Focus a space in the Inventory page and press **left shoulder + west face button** (Xbox-position names: `LB + X`). The default device-agnostic MMAPI binding is:
+Focus a space in the Inventory page and press the **left stick button** (`L3`, by clicking the stick). The default device-agnostic MMAPI binding is:
 
 ```text
-GAMEPAD_LEFT_SHOULDER+GAMEPAD_X
+GAMEPAD_LEFT_STICK
 ```
 
-The binding works only while an inventory space is focused on the Player Inventory page. On Nintendo-layout controllers, the printed face-button label may differ because MMAPI's `A/B/X/Y` names refer to Xbox button positions. The binding can be changed in the config file; an invalid value falls back to the default.
+The binding works only while an inventory space is focused on the Player Inventory page. Version 0.1.2 replaces the old `GAMEPAD_LEFT_SHOULDER+GAMEPAD_X` default because `LB` changes vanilla Journal and toolbar pages while `X` performs Pick Up One. Existing version-1 configs keep every other option and reset this controller binding once to `GAMEPAD_LEFT_STICK`; it can then be customized normally. An invalid value also falls back to the default.
 
 ## Persistence
 
@@ -74,7 +74,7 @@ Available options:
 | `enabled` | `true` | Master switch. When disabled, toggling, indicators, and Sort protection are inactive; saved locks are retained. |
 | `show_lock_border` | `true` | Shows the yellow border. Locks and Sort protection remain active when it is hidden. The old `show_lock_icon` option is migrated automatically. |
 | `protect_from_sort` | `true` | Excludes locked positions from vanilla Sort. When disabled, locks remain saved and visible but do not affect Sort. |
-| `controller_toggle_binding` | `GAMEPAD_LEFT_SHOULDER+GAMEPAD_X` | Device-agnostic MMAPI binding used on the focused inventory space. Invalid bindings fall back to the default. |
+| `controller_toggle_binding` | `GAMEPAD_LEFT_STICK` | Device-agnostic MMAPI binding used on the focused inventory space. Version-1 configs reset this field once to remove the conflicting legacy control; subsequent custom values are preserved. |
 | `debug_logging` | `false` | Writes bounded lock and Sort diagnostics, including successful invariant checks, to the mod log. |
 
 Restart the game after editing the config.
@@ -132,13 +132,13 @@ Abre la página vanilla de Inventario, mantén **Mayús** y haz **clic derecho**
 
 ### Mando
 
-Enfoca un espacio en la página de Inventario y pulsa **botón superior izquierdo + botón de cara izquierdo** (`LB + X` según posiciones Xbox). El binding predeterminado de MMAPI es:
+Enfoca un espacio en la página de Inventario y pulsa el **botón del stick izquierdo** (`L3`, presionando el stick). El binding predeterminado de MMAPI es:
 
 ```text
-GAMEPAD_LEFT_SHOULDER+GAMEPAD_X
+GAMEPAD_LEFT_STICK
 ```
 
-En mandos con distribución Nintendo, la etiqueta impresa puede ser distinta porque los nombres `A/B/X/Y` de MMAPI indican posiciones Xbox. El binding se puede cambiar en la configuración; un valor inválido vuelve al predeterminado.
+La versión 0.1.2 sustituye el antiguo binding `GAMEPAD_LEFT_SHOULDER+GAMEPAD_X`: `LB` cambia páginas vanilla del Diario y la barra, mientras que `X` ejecuta Recoger uno. Las configuraciones de versión 1 conservan todas las demás opciones y restablecen una sola vez este binding a `GAMEPAD_LEFT_STICK`; después puede personalizarse con normalidad. Un valor inválido también vuelve al predeterminado.
 
 ## Persistencia
 
@@ -159,7 +159,7 @@ MMAPI crea `%LOCALAPPDATA%/FieldsOfMistria/mod_data/locked_inventory_slots/locke
 | `enabled` | `true` | Interruptor general. Al desactivarlo no se puede alternar bloqueos y se ocultan los indicadores y la protección; los bloqueos guardados se conservan. |
 | `show_lock_border` | `true` | Muestra el borde amarillo. Ocultarlo no desactiva los bloqueos ni su protección. Migra automáticamente la antigua opción `show_lock_icon`. |
 | `protect_from_sort` | `true` | Excluye de Ordenar las posiciones bloqueadas. Al desactivarlo, los bloqueos siguen guardados y visibles, pero Ordenar no los respeta. |
-| `controller_toggle_binding` | `GAMEPAD_LEFT_SHOULDER+GAMEPAD_X` | Binding MMAPI para alternar el espacio enfocado con mando. |
+| `controller_toggle_binding` | `GAMEPAD_LEFT_STICK` | Binding MMAPI para alternar el espacio enfocado con mando. Las configuraciones v1 restablecen este campo una vez para eliminar el control antiguo en conflicto. |
 | `debug_logging` | `false` | Escribe diagnósticos limitados de bloqueos, operaciones de Ordenar y comprobaciones de integridad. |
 
 ## Compatibilidad, seguridad y límites
