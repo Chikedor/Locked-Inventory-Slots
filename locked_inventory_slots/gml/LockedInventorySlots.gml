@@ -1,7 +1,7 @@
 #macro LOCKED_INVENTORY_SLOTS_MOD "locked_inventory_slots"
-#macro LOCKED_INVENTORY_SLOTS_VERSION "0.1.2"
+#macro LOCKED_INVENTORY_SLOTS_VERSION "0.2.0"
 #macro LOCKED_INVENTORY_SLOTS_CONFIG_VERSION 2
-#macro LOCKED_INVENTORY_SLOTS_SAVE_VERSION 1
+#macro LOCKED_INVENTORY_SLOTS_SAVE_VERSION 2
 #macro LOCKED_INVENTORY_SLOTS_CONTROLLER_BINDING "GAMEPAD_LEFT_STICK"
 
 function locked_inventory_slots_runtime() {
@@ -11,6 +11,7 @@ function locked_inventory_slots_runtime() {
             initialized: false,
             config: undefined,
             locked_slots: [],
+            storage_locks: [],
             wrapped_inventory: undefined,
             normalized_inventory: undefined,
             original_sort: undefined,
@@ -19,6 +20,13 @@ function locked_inventory_slots_runtime() {
             wrapped_input_menu: undefined,
             original_input_check: undefined,
             toolbar_menu: undefined,
+            pending_storage_menu: undefined,
+            storage_menu: undefined,
+            storage_key: undefined,
+            storage_inventory: undefined,
+            storage_original_sort: undefined,
+            storage_input_menu: undefined,
+            storage_original_input_check: undefined,
             controller_binding_registered: false,
         };
     }
@@ -108,32 +116,132 @@ function locked_inventory_slots_toggle(_index) {
     return _changed;
 }
 
-function locked_inventory_slots_save_collect() {
+function locked_inventory_slots_copy_valid_indices(_source, _limit=1000) {
     var _copy = [];
-    var _locks = locked_inventory_slots_runtime().locked_slots;
-    for (var _i = 0; _i < array_length(_locks); _i++) {
-        array_push(_copy, _locks[_i]);
+    if (!is_array(_source)) {
+        return _copy;
     }
-    return { version: LOCKED_INVENTORY_SLOTS_SAVE_VERSION, locked_slots: _copy };
+    for (var _i = 0; _i < array_length(_source); _i++) {
+        var _index = _source[_i];
+        if (is_real(_index)
+            && _index >= 0
+            && _index == floor(_index)
+            && _index < _limit
+            && !array_contains(_copy, _index))
+        {
+            array_push(_copy, _index);
+        }
+    }
+    return _copy;
+}
+
+function locked_inventory_slots_storage_key(_node) {
+    if (!is_struct(_node)) {
+        return undefined;
+    }
+    var _grid = _node[$ "parent_grid"];
+    var _prototype = _node[$ "prototype"];
+    if (!is_struct(_grid)
+        || !is_struct(_prototype)
+        || !is_struct(_prototype[$ "interaction_chest"])
+        || !_prototype.interaction_chest.belongs_to_ari
+        || _prototype.interaction_chest.shipping_bin)
+    {
+        return undefined;
+    }
+    var _dyn_index = _grid[$ "dyn_index"];
+    return string(_grid.location_id)
+        + ":" + (_dyn_index == undefined ? "none" : string(_dyn_index))
+        + ":" + string(_node.top_left_x)
+        + ":" + string(_node.top_left_y)
+        + ":" + string(_node.object_id);
+}
+
+function locked_inventory_slots_storage_record(_key, _create=false) {
+    if (!is_string(_key)) {
+        return undefined;
+    }
+    var _records = locked_inventory_slots_runtime().storage_locks;
+    for (var _i = 0; _i < array_length(_records); _i++) {
+        if (_records[_i].key == _key) {
+            return _records[_i];
+        }
+    }
+    if (!_create) {
+        return undefined;
+    }
+    var _record = { key: _key, locked_slots: [] };
+    array_push(_records, _record);
+    return _record;
+}
+
+function locked_inventory_slots_storage_is_locked(_key, _index) {
+    var _record = locked_inventory_slots_storage_record(_key);
+    return is_real(_index)
+        && _index >= 0
+        && _record != undefined
+        && array_contains(_record.locked_slots, floor(_index));
+}
+
+function locked_inventory_slots_storage_toggle(_key, _index) {
+    if (!is_string(_key) || !is_real(_index) || _index < 0) {
+        return false;
+    }
+    _index = floor(_index);
+    var _record = locked_inventory_slots_storage_record(_key, true);
+    if (array_contains(_record.locked_slots, _index)) {
+        array_delete(_record.locked_slots, array_pos(_record.locked_slots, _index), 1);
+        locked_inventory_slots_debug("Unlocked storage slot " + string(_index) + " at " + _key);
+    } else {
+        array_push(_record.locked_slots, _index);
+        locked_inventory_slots_debug("Locked storage slot " + string(_index) + " at " + _key);
+    }
+    locked_inventory_slots_update_visible_indicators();
+    TANGO.play("SoundEffects/UI/UIClick");
+    return true;
+}
+
+function locked_inventory_slots_save_collect() {
+    var _rt = locked_inventory_slots_runtime();
+    var _storage_copy = [];
+    for (var _i = 0; _i < array_length(_rt.storage_locks); _i++) {
+        var _record = _rt.storage_locks[_i];
+        var _locks = locked_inventory_slots_copy_valid_indices(_record.locked_slots);
+        if (is_string(_record.key) && array_length(_locks) > 0) {
+            array_push(_storage_copy, { key: _record.key, locked_slots: _locks });
+        }
+    }
+    return {
+        version: LOCKED_INVENTORY_SLOTS_SAVE_VERSION,
+        locked_slots: locked_inventory_slots_copy_valid_indices(_rt.locked_slots),
+        storage_locks: _storage_copy,
+    };
 }
 
 function locked_inventory_slots_save_apply(_data) {
     var _rt = locked_inventory_slots_runtime();
     _rt.locked_slots = [];
+    _rt.storage_locks = [];
     _rt.normalized_inventory = undefined;
     if (is_struct(_data)
-        && _data[$ "version"] == LOCKED_INVENTORY_SLOTS_SAVE_VERSION
+        && (_data[$ "version"] == 1 || _data[$ "version"] == LOCKED_INVENTORY_SLOTS_SAVE_VERSION)
         && is_array(_data[$ "locked_slots"]))
     {
-        for (var _i = 0; _i < array_length(_data.locked_slots); _i++) {
-            var _index = _data.locked_slots[_i];
-            if (is_real(_index)
-                && _index >= 0
-                && _index == floor(_index)
-                && _index < 1000
-                && !array_contains(_rt.locked_slots, _index))
-            {
-                array_push(_rt.locked_slots, _index);
+        _rt.locked_slots = locked_inventory_slots_copy_valid_indices(_data.locked_slots);
+        if (_data.version == LOCKED_INVENTORY_SLOTS_SAVE_VERSION
+            && is_array(_data[$ "storage_locks"]))
+        {
+            for (var _i = 0; _i < array_length(_data.storage_locks); _i++) {
+                var _record = _data.storage_locks[_i];
+                if (!is_struct(_record) || !is_string(_record[$ "key"])) {
+                    continue;
+                }
+                var _locks = locked_inventory_slots_copy_valid_indices(_record[$ "locked_slots"]);
+                if (array_length(_locks) > 0
+                    && locked_inventory_slots_storage_record(_record.key) == undefined)
+                {
+                    array_push(_rt.storage_locks, { key: _record.key, locked_slots: _locks });
+                }
             }
         }
     }
@@ -154,6 +262,16 @@ function locked_inventory_slots_normalize_for_inventory(_inventory) {
         }
     }
     _rt.locked_slots = _valid;
+}
+
+function locked_inventory_slots_normalize_storage(_key, _inventory) {
+    var _record = locked_inventory_slots_storage_record(_key);
+    if (_record != undefined) {
+        _record.locked_slots = locked_inventory_slots_copy_valid_indices(
+            _record.locked_slots,
+            _inventory.size()
+        );
+    }
 }
 
 function locked_inventory_slots_snapshot(_inventory) {
@@ -208,9 +326,9 @@ function locked_inventory_slots_totals_match(_before, _after) {
     return true;
 }
 
-function locked_inventory_slots_locked_match(_inventory, _snapshot) {
+function locked_inventory_slots_locked_match(_inventory, _snapshot, _locks) {
     for (var _i = 0; _i < _inventory.size(); _i++) {
-        if (!locked_inventory_slots_is_locked(_i)) {
+        if (!array_contains(_locks, _i)) {
             continue;
         }
         var _slot = _inventory.slot(_i);
@@ -223,28 +341,28 @@ function locked_inventory_slots_locked_match(_inventory, _snapshot) {
     return true;
 }
 
-function locked_inventory_slots_sort_inventory() {
+function locked_inventory_slots_run_protected_sort(_inventory, _original_sort, _locks, _label) {
     var _rt = locked_inventory_slots_runtime();
     var _cfg = locked_inventory_slots_config();
-    if (_rt.sort_in_progress || self != _rt.wrapped_inventory) {
-        return method_call(_rt.original_sort, []);
+    if (_rt.sort_in_progress) {
+        return method_call(_original_sort, []);
     }
-    if (!_cfg.enabled || !_cfg.protect_from_sort || array_length(_rt.locked_slots) == 0) {
-        return method_call(_rt.original_sort, []);
+    if (!_cfg.enabled || !_cfg.protect_from_sort || array_length(_locks) == 0) {
+        return method_call(_original_sort, []);
     }
 
     _rt.sort_in_progress = true;
-    var _all_slots = self.slots;
-    var _snapshot = locked_inventory_slots_snapshot(self);
-    var _before_totals = locked_inventory_slots_totals(self);
+    var _all_slots = _inventory.slots;
+    var _snapshot = locked_inventory_slots_snapshot(_inventory);
+    var _before_totals = locked_inventory_slots_totals(_inventory);
     var _sortable = List();
-    for (var _i = 0; _i < self.size(); _i++) {
-        if (!locked_inventory_slots_is_locked(_i)) {
-            _sortable.push(self.slot(_i));
+    for (var _i = 0; _i < _inventory.size(); _i++) {
+        if (!array_contains(_locks, _i)) {
+            _sortable.push(_inventory.slot(_i));
         }
     }
     locked_inventory_slots_debug(
-        "Sort requested; locked=" + json_stringify(_rt.locked_slots)
+        _label + " Sort requested; locked=" + json_stringify(_locks)
         + "; sortable=" + string(_sortable.count())
     );
     if (_sortable.is_empty()) {
@@ -254,24 +372,54 @@ function locked_inventory_slots_sort_inventory() {
     }
 
     var _sort_error = undefined;
-    self.slots = _sortable;
+    _inventory.slots = _sortable;
     try {
-        method_call(_rt.original_sort, []);
+        method_call(_original_sort, []);
     } catch (_err) {
         _sort_error = _err;
     }
-    self.slots = _all_slots;
+    _inventory.slots = _all_slots;
     var _valid = _sort_error == undefined
-        && locked_inventory_slots_totals_match(_before_totals, locked_inventory_slots_totals(self))
-        && locked_inventory_slots_locked_match(self, _snapshot);
+        && locked_inventory_slots_totals_match(_before_totals, locked_inventory_slots_totals(_inventory))
+        && locked_inventory_slots_locked_match(_inventory, _snapshot, _locks);
     if (!_valid) {
-        locked_inventory_slots_restore_snapshot(self, _snapshot);
+        locked_inventory_slots_restore_snapshot(_inventory, _snapshot);
         var _reason = _sort_error == undefined ? "inventory invariant mismatch" : string(_sort_error);
-        mmapi_log_error(LOCKED_INVENTORY_SLOTS_MOD, "[LIS] Sort aborted and snapshot restored: " + _reason);
+        mmapi_log_error(
+            LOCKED_INVENTORY_SLOTS_MOD,
+            "[LIS] " + _label + " Sort aborted and snapshot restored: " + _reason
+        );
     } else {
-        locked_inventory_slots_debug("Inventory invariant check: PASS");
+        locked_inventory_slots_debug(_label + " inventory invariant check: PASS");
     }
     _rt.sort_in_progress = false;
+}
+
+function locked_inventory_slots_sort_inventory() {
+    var _rt = locked_inventory_slots_runtime();
+    if (self != _rt.wrapped_inventory) {
+        return method_call(_rt.original_sort, []);
+    }
+    return locked_inventory_slots_run_protected_sort(
+        self,
+        _rt.original_sort,
+        _rt.locked_slots,
+        "Player"
+    );
+}
+
+function locked_inventory_slots_sort_storage() {
+    var _rt = locked_inventory_slots_runtime();
+    if (self != _rt.storage_inventory || _rt.storage_original_sort == undefined) {
+        return;
+    }
+    var _record = locked_inventory_slots_storage_record(_rt.storage_key);
+    return locked_inventory_slots_run_protected_sort(
+        self,
+        _rt.storage_original_sort,
+        _record == undefined ? [] : _record.locked_slots,
+        "Storage"
+    );
 }
 
 function locked_inventory_slots_install_sort_wrapper(_inventory) {
@@ -285,7 +433,16 @@ function locked_inventory_slots_install_sort_wrapper(_inventory) {
     _inventory.sort = method(_inventory, locked_inventory_slots_sort_inventory);
 }
 
-function locked_inventory_slots_add_ui_indicator(_nodes, _index, _target_size=undefined) {
+function locked_inventory_slots_install_storage_sort_wrapper(_inventory, _key) {
+    var _rt = locked_inventory_slots_runtime();
+    _rt.storage_inventory = _inventory;
+    _rt.storage_key = _key;
+    _rt.storage_original_sort = _inventory.sort;
+    locked_inventory_slots_normalize_storage(_key, _inventory);
+    _inventory.sort = method(_inventory, locked_inventory_slots_sort_storage);
+}
+
+function locked_inventory_slots_add_ui_indicator(_nodes, _locked, _target_size=undefined) {
     var _border = _nodes[$ "lis_lock_border"];
     if (_border == undefined || _border.freed) {
         _border = ANCHOR.sprite(_nodes.square)
@@ -301,7 +458,7 @@ function locked_inventory_slots_add_ui_indicator(_nodes, _index, _target_size=un
         : _target_size;
     var _scale = _size / 26;
     _border.set_scale(_scale, _scale);
-    _border.set_enabled(_cfg.enabled && _cfg.show_lock_border && locked_inventory_slots_is_locked(_index));
+    _border.set_enabled(_cfg.enabled && _cfg.show_lock_border && _locked);
     return _border;
 }
 
@@ -311,7 +468,7 @@ function locked_inventory_slots_update_player_indicators(_menu) {
     }
     var _slots = _menu.inventory.slots;
     for (var _i = 0; _i < array_length(_slots); _i++) {
-        locked_inventory_slots_add_ui_indicator(_slots[_i], _i);
+        locked_inventory_slots_add_ui_indicator(_slots[_i], locked_inventory_slots_is_locked(_i));
     }
 }
 
@@ -321,7 +478,24 @@ function locked_inventory_slots_update_toolbar_indicators(_menu) {
     }
     for (var _i = 0; _i < array_length(_menu.slots); _i++) {
         var _inventory_index = _i + (10 * _menu.page);
-        locked_inventory_slots_add_ui_indicator(_menu.slots[_i], _inventory_index, 20);
+        locked_inventory_slots_add_ui_indicator(
+            _menu.slots[_i],
+            locked_inventory_slots_is_locked(_inventory_index),
+            20
+        );
+    }
+}
+
+function locked_inventory_slots_update_storage_indicators(_menu, _key) {
+    if (_menu == undefined || _menu.left_menu == undefined || !is_array(_menu.left_menu.slots)) {
+        return;
+    }
+    for (var _i = 0; _i < array_length(_menu.left_menu.slots); _i++) {
+        locked_inventory_slots_add_ui_indicator(
+            _menu.left_menu.slots[_i],
+            locked_inventory_slots_storage_is_locked(_key, _i),
+            20
+        );
     }
 }
 
@@ -329,12 +503,13 @@ function locked_inventory_slots_update_visible_indicators() {
     var _rt = locked_inventory_slots_runtime();
     locked_inventory_slots_update_player_indicators(_rt.player_menu);
     locked_inventory_slots_update_toolbar_indicators(_rt.toolbar_menu);
+    locked_inventory_slots_update_storage_indicators(_rt.storage_menu, _rt.storage_key);
 }
 
 function locked_inventory_slots_handle_input(_index) {
     var _rt = locked_inventory_slots_runtime();
     if (locked_inventory_slots_config().enabled
-        && keyboard_check(vk_shift)
+        && keyboard_check(ord("Z"))
         && INPUT.pressed(InputId.PickUpOne))
     {
         locked_inventory_slots_toggle(_index);
@@ -354,18 +529,88 @@ function locked_inventory_slots_install_input_wrapper(_menu) {
     _inventory_menu.input_check = method(_inventory_menu, locked_inventory_slots_handle_input);
 }
 
-function locked_inventory_slots_on_controller_toggle() {
+function locked_inventory_slots_handle_storage_input(_index) {
     var _rt = locked_inventory_slots_runtime();
-    var _menu = _rt.player_menu;
-    if (!locked_inventory_slots_config().enabled
-        || _menu == undefined
-        || ANCHOR.get_active_pilot() != _menu.inventory_pilot)
+    if (locked_inventory_slots_config().enabled
+        && keyboard_check(ord("Z"))
+        && INPUT.pressed(InputId.PickUpOne))
+    {
+        locked_inventory_slots_storage_toggle(_rt.storage_key, _index);
+        return;
+    }
+    method_call(_rt.storage_original_input_check, [_index]);
+}
+
+function locked_inventory_slots_install_storage_input_wrapper(_menu) {
+    var _rt = locked_inventory_slots_runtime();
+    _rt.storage_input_menu = _menu.left_menu;
+    _rt.storage_original_input_check = _menu.left_menu.input_check;
+    _menu.left_menu.input_check = method(_menu.left_menu, locked_inventory_slots_handle_storage_input);
+}
+
+function locked_inventory_slots_storage_cleanup() {
+    var _rt = locked_inventory_slots_runtime();
+    if (_rt.storage_inventory != undefined && _rt.storage_original_sort != undefined) {
+        _rt.storage_inventory.sort = _rt.storage_original_sort;
+    }
+    if (_rt.storage_input_menu != undefined && _rt.storage_original_input_check != undefined) {
+        _rt.storage_input_menu.input_check = _rt.storage_original_input_check;
+    }
+    _rt.pending_storage_menu = undefined;
+    _rt.storage_menu = undefined;
+    _rt.storage_key = undefined;
+    _rt.storage_inventory = undefined;
+    _rt.storage_original_sort = undefined;
+    _rt.storage_input_menu = undefined;
+    _rt.storage_original_input_check = undefined;
+}
+
+function locked_inventory_slots_try_setup_storage() {
+    var _rt = locked_inventory_slots_runtime();
+    var _menu = _rt.pending_storage_menu;
+    if (_menu == undefined || _rt.storage_menu == _menu) {
+        return;
+    }
+    if (_menu[$ "node"] == undefined
+        || _menu[$ "left"] == undefined
+        || _menu[$ "left_menu"] == undefined
+        || _menu[$ "left_pilot"] == undefined
+        || !is_array(_menu.left_menu[$ "slots"]))
     {
         return;
     }
-    var _node = _menu.inventory_pilot.get();
-    if (_node != undefined && _node.blackboard.contains_key("index")) {
-        locked_inventory_slots_toggle(_node.board_get("index"));
+    var _key = locked_inventory_slots_storage_key(_menu.node);
+    if (_key == undefined) {
+        _rt.pending_storage_menu = undefined;
+        return;
+    }
+    locked_inventory_slots_install_storage_sort_wrapper(_menu.left, _key);
+    locked_inventory_slots_install_storage_input_wrapper(_menu);
+    _rt.storage_menu = _menu;
+    _rt.pending_storage_menu = undefined;
+    locked_inventory_slots_update_storage_indicators(_menu, _key);
+    mmapi_log_info(LOCKED_INVENTORY_SLOTS_MOD, "[LIS] Storage lock controls ready at " + _key);
+    mmapi_log_flush(LOCKED_INVENTORY_SLOTS_MOD);
+}
+
+function locked_inventory_slots_on_controller_toggle() {
+    var _rt = locked_inventory_slots_runtime();
+    if (!locked_inventory_slots_config().enabled) {
+        return;
+    }
+    var _pilot = ANCHOR.get_active_pilot();
+    if (_rt.player_menu != undefined && _pilot == _rt.player_menu.inventory_pilot) {
+        var _node = _rt.player_menu.inventory_pilot.get();
+        if (_node != undefined && _node.blackboard.contains_key("index")) {
+            locked_inventory_slots_toggle(_node.board_get("index"));
+        }
+        return;
+    }
+    if (_rt.storage_menu != undefined && _pilot == _rt.storage_menu.left_pilot) {
+        var _node = _rt.storage_menu.left_pilot.get();
+        if (_node != undefined && _node.blackboard.contains_key("index")) {
+            locked_inventory_slots_storage_toggle(_rt.storage_key, _node.board_get("index"));
+        }
     }
 }
 
@@ -379,6 +624,8 @@ function locked_inventory_slots_on_menu_opened(_ctx) {
     } else if (_ctx.kind == Menu.Toolbar) {
         _rt.toolbar_menu = _ctx.menu;
         locked_inventory_slots_update_toolbar_indicators(_ctx.menu);
+    } else if (_ctx.kind == Menu.Storage) {
+        _rt.pending_storage_menu = _ctx.menu;
     }
 }
 
@@ -390,6 +637,10 @@ function locked_inventory_slots_on_menu_closed(_ctx) {
         _rt.original_input_check = undefined;
     } else if (_ctx.kind == Menu.Toolbar && _rt.toolbar_menu == _ctx.menu) {
         _rt.toolbar_menu = undefined;
+    } else if (_ctx.kind == Menu.Storage
+        && (_rt.pending_storage_menu == _ctx.menu || _rt.storage_menu == _ctx.menu))
+    {
+        locked_inventory_slots_storage_cleanup();
     }
 }
 
@@ -428,6 +679,7 @@ function locked_inventory_slots_tick() {
         }
         locked_inventory_slots_debug("Ready");
     }
+    locked_inventory_slots_try_setup_storage();
 }
 
 mmapi_mod_declare(LOCKED_INVENTORY_SLOTS_MOD, LOCKED_INVENTORY_SLOTS_VERSION);

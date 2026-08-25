@@ -1,8 +1,8 @@
 {
   "name": "Locked Inventory Slots",
   "author": "Chikedor",
-  "version": "0.1.2",
-  "description": "Locks individual player inventory slots so vanilla Sort leaves them untouched.",
+  "version": "0.2.0",
+  "description": "Locks player-inventory and storage-chest positions so vanilla Sort leaves them untouched.",
   "minInstallerVersion": "0.15.6",
   "manifestVersion": 1,
   "requires_hooks": [
