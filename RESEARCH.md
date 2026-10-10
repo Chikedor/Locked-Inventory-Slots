@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-- Fields of Mistria: 1.0.4, Steam build 24820767
-- MOMI/MMAPI: 0.15.6, tag `v0.15.6`, commit `288d843a57df4ee7c7bab224925fde1ce54d1bf4`
+- Fields of Mistria: 1.0.6, Steam build 25583279.
+- MOMI/MMAPI: 0.16.5, tag `v0.16.5`, commit `66fac9b03b97b8cfb6d9bd01adb793ac0d190be4`.
 
 ## Player-visible objective
 
@@ -131,3 +131,22 @@ MOMI 0.15.6 strict lint and required compilation passed the deferred-setup candi
 The first successful chest-interaction test also exposed two presentation/input conflicts. Vanilla `Shift + right-click` performs quick transfer in `InventoryControlMode.Storage`, while `Ctrl + right-click` performs half-stack pickup. Two Alt attempts were rejected and each fully rolled back: the modern `vk_alt` spelling crashed because this runtime resolved it as a missing field, and numeric keycode 18 crashed as out of range for `keyboard_check`. The final candidate uses `Z + right-click`; `ord("Z")` is explicitly present in pristine 1.0.4 `InputUtils.gml`. The native 26x26 outline at the chest node's full 22x22 logical size also visually merged with the brown grid, so the candidate centers it at 20x20; player-inventory indicators remain 22x22.
 
 The final 0.2.0 candidate was applied successfully with MOMI 0.15.6. The repository and installed GML shared SHA-256 `e42a0e40c1f4a5b5716082140fa3777d60332d39c4304870358c73a4cdfedb75`; the resulting `assets.zip` SHA-256 was `10d65059c368b1a2a7040f196255fb0a2dd6021ad1829afa8829746fed454b1e`. The user confirmed in game that the final build loads, `Z + right-click` toggles the chest lock without the vanilla Shift/Ctrl conflicts, and the reduced chest border is acceptable. Earlier testing in the same regression sequence confirmed that chest positions can be locked after deferred setup; the existing player inventory, toolbar, controller, and protected-sort behavior remained the known-good base throughout the rollback-driven iterations.
+
+## Compatibility refresh â€” 0.2.1 (2026-10-10)
+
+- Executable product/file version: 1.0.6; Steam buildid and TargetBuildID: 25583279.
+- Official latest stable MOMI: [v0.16.5](https://github.com/Garethp/Mods-of-Mistria-Installer/releases/tag/v0.16.5), commit `66fac9b03b97b8cfb6d9bd01adb793ac0d190be4`, published 2026-10-02. The Windows x64 CLI SHA-256 `8eb4fe1a6e22b019408a955da9ab8e95e8755a1cc37ed8b80c648d0586152283` matches the release asset's published digest.
+- Fresh Steam archive SHA-256: `efdb1cfbacf206507f0733c589976c08c96e28e3c406f62e5018395c8fb93e75`. It contains no MMAPI or mod paths. The old backup remains the pristine 1.0.4 hash `e55ef6bcaa7430008a6fcae7980ef06ca6912bb10431c177807b366a0fc5a450` and must not be used for this build. A 1.0.6-specific source marker is the `mill_is_repaired` / `repair_the_mill_pt_2` guard in `objects/meta/obj_sound_emitter.gml`, absent in the inspected 1.0.5 source.
+- Compared pristine 1.0.4 and 1.0.6 sources: Inventory, InventoryMenu, PlayerMenu, ToolbarMenu, InfoHudMenu, QuestLogMenu, RelationshipsMenu, MapMenu, Node, Npc, QuestDatabase, QuestLog and InputUtils are byte-identical. Requirements changes only the child-age predicate, outside these mods' requirements. StorageMenu adds nearest-supported-size asset lookup while retaining inventories, pilots, slot nodes and build order. Settings changes concern vanilla display/cursor settings; Vitals retains root and occupied-space layout. Journal's new canvas-unlocked gate does not change its sub-menu API.
+- Anchor now clears pending nodes and computes caches in `on_end_step()`; the mods use existing nodes and deferred idempotent setup, with no custom drawing. The NPC live-location/met-state path, active quest/current-stage path, requirement renderers, storage registry/ownership filters, and deferred `obj_ari.ui_journal_request` remain available. The player rendering rewrite does not change inventory resize or Journal opening.
+- Official 0.16.5 source confirms UI open/close seams and toolbar/vitals refresh payloads, device-agnostic hotkey bindings, lifecycle ticks, configuration helpers and per-save sidecar registration remain compatible. The refresh hook additionally covers CraftingMenu; these mods already filter the menu kind. Sidecars now have last-good backup/recovery without changing the registered payload.
+- All three unchanged baseline mods passed strict lint and required compilation against the exact 1.0.6 pristine archive, each listing its one GML file and expected installation namespace. This release changes version metadata and minimum installer only; config and save schema numbers are unchanged.
+- Runtime regression on 1.0.6 passed, as confirmed by the user on 2026-10-10.
+
+### Final-version validation and installation (2026-10-10)
+
+Official MOMI 0.16.5 strict lint and required compile check passed version 0.2.1, listing one GML file under scripts/chikedor_locked_inventory_slots/. Combined strict apply with fail-on-skip compiled 108 framework/seamed files plus all three mod scripts and installed all three. Final assets.zip SHA-256: 2abfe06bc598a4fc2eee94f7396b6175ec78fee443bdcabafb1fd352f91449ec. Pristine backup SHA-256: efdb1cfbacf206507f0733c589976c08c96e28e3c406f62e5018395c8fb93e75. This mod source, installed-folder script and final archive entry share SHA-256 6b9748bca7f9e31a164e83e9e12d3741e531e83011f68e94e984bf2b0597f561; manifest versions match. The new framework marker mmapi_monster_status_overlay and expected UI seams are present. In-game regression passed, as confirmed by the user on 2026-10-10.
+
+### Runtime regression (2026-10-10)
+
+The user confirmed the submitted player-inventory/chest lock and Sort regression checklist on 1.0.6. The existing behavior was retained; no config or save schema migration was introduced. Controller L3 was included in the checklist when using a controller; no separate controller trace was captured.

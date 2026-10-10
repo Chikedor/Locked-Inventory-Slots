@@ -6,10 +6,10 @@ The mod does not replace the inventory or implement a custom category/order algo
 
 ## Requirements
 
-- Fields of Mistria 1.0.4, Steam build 24820767
-- MOMI/MMAPI 0.15.6 or newer
+- Fields of Mistria 1.0.6, Steam build 25583279
+- MOMI/MMAPI 0.16.5 or newer
 
-Version 0.2.0 was built, compile-validated, and tested in game with the versions above. It adds independent locks to ordinary player-owned storage chests while preserving the existing player-inventory and toolbar behavior.
+Version 0.2.1 updates compatibility for the versions above. It preserves the player-inventory, toolbar, and ordinary storage-chest behavior introduced in 0.2.0. Strict lint, required compilation and in-game regression passed on 2026-10-10.
 
 ## Installation
 
@@ -110,8 +110,8 @@ El mod no sustituye el inventario ni crea un algoritmo de ordenación propio. La
 
 ## Requisitos
 
-- Fields of Mistria 1.0.4, compilación 24820767 de Steam
-- MOMI/MMAPI 0.15.6 o posterior
+- Fields of Mistria 1.0.6, compilación 25583279 de Steam
+- MOMI/MMAPI 0.16.5 o posterior
 
 ## Instalación y uso
 
@@ -186,3 +186,9 @@ MMAPI crea `%LOCALAPPDATA%/FieldsOfMistria/mod_data/locked_inventory_slots/locke
 3. Ejecuta MOMI otra vez para volver a aplicar los demás mods.
 
 Los archivos auxiliares por partida no causan ningún problema si permanecen ahí. Elimina `mod_data/locked_inventory_slots` únicamente si también quieres borrar todos los bloqueos guardados y la configuración.
+
+## Compatibility refresh / Actualización de compatibilidad — 0.2.1
+
+Fields of Mistria 1.0.6 (Steam build 25583279), official MOMI/MMAPI 0.16.5. Compatibility-only update; config and per-save schemas remain unchanged. Strict lint and required compilation pass. In-game regression passed on 2026-10-10.
+
+Actualización de compatibilidad; conserva las funciones, la configuración y los datos auxiliares por partida. Lint estricto y compilación obligatoria correctos. La prueba en juego se confirmó el 2026-10-10.
